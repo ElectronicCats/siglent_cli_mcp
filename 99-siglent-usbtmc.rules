@@ -1,0 +1,3 @@
+# Siglent SDS1104X-E oscilloscope - USBTMC access for non-root users
+SUBSYSTEM=="usb", ATTRS{idVendor}=="f4ec", ATTRS{idProduct}=="ee38", MODE="0666", GROUP="plugdev"
+KERNEL=="usbtmc*", ATTRS{idVendor}=="f4ec", ATTRS{idProduct}=="ee38", MODE="0666", GROUP="plugdev"
