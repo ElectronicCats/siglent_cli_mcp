@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sds1104x-cli"
+version = "1.0.0"
+description = "Full-featured CLI to control a Siglent SDS1104X-E oscilloscope over USBTMC"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = [
+    "click>=8.0",
+    "pyvisa>=1.13",
+    "pyvisa-py>=0.5",
+    "pyusb>=1.2",
+]
+
+[project.scripts]
+osc = "osc_cli.cli:run"
+
+[tool.setuptools]
+packages = ["osc_cli", "osc_cli.commands"]
