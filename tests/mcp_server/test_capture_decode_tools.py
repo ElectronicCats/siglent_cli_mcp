@@ -122,3 +122,9 @@ async def test_decode_spi_needs_a_data_line(client, fake):
     put_wave(fake, "C1", [0.0] * 10)
     r = await client.call_tool("siglent_decode_spi", {})
     assert r.is_error and "mosi" in r.content[0].text
+
+
+async def test_capture_screen_rejects_non_png_save_path_before_capturing(client, fake):
+    r = await client.call_tool("siglent_capture_screen", {"save_path": "a.csv"})
+    assert r.is_error and ".png" in r.content[0].text
+    assert ("raw", "SCDP") not in fake.log

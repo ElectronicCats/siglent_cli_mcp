@@ -90,3 +90,14 @@ def test_setup_paths_are_quoted_and_validated():
     assert fake.writes == ['STORE_SETUP FILE,"/usb/a.xml"', 'RECALL_SETUP FILE,"/usb/a.xml"']
     with pytest.raises(ValueError, match="quotes"):
         misc.save_setup(fake, 'a"b')
+
+
+def test_setup_path_rejects_control_characters():
+    fake = FakeOscilloscope()
+    with pytest.raises(ValueError, match="control characters"):
+        misc.save_setup(fake, "a\nb")
+    with pytest.raises(ValueError, match="control characters"):
+        misc.recall_setup(fake, "a\tb")
+    with pytest.raises(ValueError, match="control characters"):
+        misc.save_setup(fake, "a\x7fb")
+    assert fake.writes == []

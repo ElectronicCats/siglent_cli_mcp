@@ -53,8 +53,11 @@ def load_csv(path) -> tuple[list[float], float]:
         for line in f:
             parts = line.strip().split(",")
             if len(parts) >= 3:
-                volts.append(float(parts[1]))
-                times.append(float(parts[2]))
+                try:
+                    volts.append(float(parts[1]))
+                    times.append(float(parts[2]))
+                except ValueError:
+                    raise ValueError(f"{path}: not a waveform CSV (index,voltage,time)") from None
     if len(volts) < 2:
         raise ValueError(f"{path}: not enough samples.")
     return volts, (times[-1] - times[0]) / (len(times) - 1)

@@ -43,6 +43,15 @@ def test_capture_csv_round_trips_through_load_csv(tmp_path):
     assert volts == pytest.approx(list(waveform.to_volts(raw)), abs=1e-6)
 
 
+
+def test_load_csv_rejects_non_csv_without_echoing_content(tmp_path):
+    path = tmp_path / "x.csv"
+    path.write_text("index,voltage,time\n0,secret,0\n1,x,1\n")
+    with pytest.raises(ValueError, match="not a waveform CSV") as e:
+        decode.load_csv(path)
+    assert "secret" not in str(e.value)
+
+
 def test_capture_lines_freezes_once():
     fake = FakeOscilloscope()
     fake.blocks["C1"] = make_wavedesc_block(bytes(10), interval=2e-6)

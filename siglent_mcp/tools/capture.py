@@ -31,10 +31,14 @@ def register(server: MCPServer, deps: Deps) -> None:
         Good for a quick visual check of traces, cursors and on-screen measurements.
         For numbers use siglent_measure or siglent_capture_waveform instead.
         """
+        path = None
+        if save_path:
+            if not save_path.lower().endswith(".png"):
+                raise ValueError("save_path must end in .png")
+            path = storage.output_path("screens", ".png", save_path)
         png = session.run(screen.capture_png, retry=True)
         content: list[Image | TextContent] = [Image(data=png, format="png")]
-        if save_path:
-            path = storage.output_path("screens", ".png", save_path)
+        if path:
             path.write_bytes(png)
             content.append(TextContent(type="text", text=f"Saved to {path}"))
         return content

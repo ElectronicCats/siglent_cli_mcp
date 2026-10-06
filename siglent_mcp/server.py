@@ -55,7 +55,7 @@ server = create_server()
 
 
 def main() -> None:
-    logging.basicConfig(stream=sys.stderr, level=os.environ.get("OSC_LOG_LEVEL", "INFO"))
+    logging.basicConfig(stream=sys.stderr, level=os.environ.get("OSC_LOG_LEVEL", "INFO").upper())
     server.run()
 
 

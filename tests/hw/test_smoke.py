@@ -16,7 +16,7 @@ import time
 
 import pytest
 
-from osc_cli.device import OscError, get_device
+from osc_cli.device import OscError, OscTransportError, get_device
 from osc_cli.imaging import PNG_SIGNATURE, bmp_to_png
 from osc_cli.ops import acquisition, channel, measure, screen, system, timebase, trigger, waveform
 from osc_cli.ops._parse import value_of
@@ -75,6 +75,8 @@ def test_capture_and_sparsing(osc):
     limit = max(count // 4, 1000)
     try:
         raw = waveform.fetch(osc, "C1", max_samples=limit)
+    except OscTransportError as e:
+        pytest.fail(f"USB transfer failed ({e}); check the cable/power-cycle before judging WFSU SP")
     except OscError as e:
         pytest.fail(f"WFSU SP ignored by the firmware ({e}). Expected: fetch refuses; "
                     "document in README that captures need memory <= OSC_MAX_SAMPLES.")
