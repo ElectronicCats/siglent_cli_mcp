@@ -5,6 +5,7 @@ from __future__ import annotations
 import click
 
 from ..cli import osc
+from ..ops import misc as ops_misc
 
 
 @click.group(name="math")
@@ -13,15 +14,15 @@ def math_group():
 
 
 @math_group.command("function")
-@click.argument("value", type=click.Choice(["FX", "FY", "FZ", "ADD", "SUB", "MUL", "DIV", "FFT"]), required=False)
+@click.argument("value", type=click.Choice(ops_misc.MATH_FUNCTIONS), required=False)
 @click.pass_context
 def function(ctx, value):
     """Get/set the math function via MATH:FUNC."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("MATH:FUNC?"))
+        click.echo(ops_misc.query(o, "MATH:FUNC"))
     else:
-        o.write(f"MATH:FUNC {value}")
+        ops_misc.set_math_function(o, value)
         click.echo(f"Math function = {value}")
 
 
@@ -32,9 +33,9 @@ def offset(ctx, value):
     """Get/set math vertical offset via MATH:OFST."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("MATH:OFST?"))
+        click.echo(ops_misc.query(o, "MATH:OFST"))
     else:
-        o.write(f"MATH:OFST {value}")
+        ops_misc.set_math_offset(o, value)
         click.echo(f"Math offset = {value}")
 
 
@@ -45,9 +46,9 @@ def scale(ctx, value):
     """Get/set math vertical scale via MATH:SCALE."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("MATH:SCALE?"))
+        click.echo(ops_misc.query(o, "MATH:SCALE"))
     else:
-        o.write(f"MATH:SCALE {value}")
+        ops_misc.set_math_scale(o, value)
         click.echo(f"Math scale = {value}")
 
 
@@ -57,15 +58,15 @@ def display_group():
 
 
 @display_group.command("grid")
-@click.argument("value", type=click.Choice(["FULL", "HALF", "OFF"]), required=False)
+@click.argument("value", type=click.Choice(ops_misc.GRIDS), required=False)
 @click.pass_context
 def grid(ctx, value):
     """Get/set grid display via GRDS."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("GRDS?"))
+        click.echo(ops_misc.query(o, "GRDS"))
     else:
-        o.write(f"GRDS {value}")
+        ops_misc.set_grid(o, value)
         click.echo(f"Grid = {value}")
 
 
@@ -76,9 +77,9 @@ def intensity(ctx, value):
     """Get/set trace intensity via INTS."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("INTS?"))
+        click.echo(ops_misc.query(o, "INTS"))
     else:
-        o.write(f"INTS TRACE,{value}")
+        ops_misc.set_intensity(o, value)
         click.echo(f"Trace intensity = {value}")
 
 
@@ -89,9 +90,9 @@ def menu(ctx, value):
     """Get/set menu display via MENU."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("MENU?"))
+        click.echo(ops_misc.query(o, "MENU"))
     else:
-        o.write(f"MENU {value}")
+        ops_misc.set_menu(o, value)
         click.echo(f"Menu = {value}")
 
 
@@ -101,13 +102,13 @@ def cursor_group():
 
 
 @cursor_group.command("mode")
-@click.argument("value", type=click.Choice(["OFF", "TRACK", "HABS", "HREL", "VABS", "VREL"]), required=False)
+@click.argument("value", type=click.Choice(ops_misc.CURSOR_MODES), required=False)
 @click.pass_context
 def mode(ctx, value):
     """Get/set cursor mode via CRMS."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("CRMS?"))
+        click.echo(ops_misc.query(o, "CRMS"))
     else:
-        o.write(f"CRMS {value}")
+        ops_misc.set_cursor_mode(o, value)
         click.echo(f"Cursor mode = {value}")

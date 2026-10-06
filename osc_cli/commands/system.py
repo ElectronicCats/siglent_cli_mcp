@@ -5,6 +5,8 @@ from __future__ import annotations
 import click
 
 from ..cli import osc
+from ..ops import acquisition as ops_acq
+from ..ops import system as ops_system
 
 
 @click.group(name="system")
@@ -26,7 +28,7 @@ def reset(ctx, yes):
     """Reset the oscilloscope to factory defaults (*RST)."""
     if not yes:
         click.confirm("This resets the oscilloscope to factory defaults. Continue?", abort=True)
-    osc(ctx).reset()
+    ops_system.reset(osc(ctx))
     click.echo("Reset complete.")
 
 
@@ -55,14 +57,14 @@ def opc(ctx):
 @click.pass_context
 def trigger(ctx):
     """Send a software trigger (*TRG)."""
-    osc(ctx).write("*TRG")
+    ops_acq.force(osc(ctx))
 
 
 @system_group.command("selftest")
 @click.pass_context
 def selftest(ctx):
     """Run self-test and report the status (*TST?)."""
-    click.echo(osc(ctx).query("*TST?"))
+    click.echo(ops_system.selftest(osc(ctx)))
 
 
 @system_group.command("calibrate")
@@ -72,7 +74,7 @@ def calibrate(ctx, yes):
     """Run internal self-calibration (*CAL?)."""
     if not yes:
         click.confirm("Self-calibration will run on the oscilloscope. Continue?", abort=True)
-    click.echo(osc(ctx).query("*CAL?"))
+    click.echo(ops_system.calibrate(osc(ctx)))
 
 
 @system_group.command("version")
