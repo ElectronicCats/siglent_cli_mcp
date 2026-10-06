@@ -1,7 +1,7 @@
 """Trigger control commands (LeCroy dialect).
 
-TRMD (mode), TRSE (setup/type), TRSR (source), TRCP (coupling), TRLV (level),
-TRDL (delay). Serial decode triggers use TRIG_UART:/TRIG_IIC:/TRIG_SPI:.
+The command strings live in osc_cli.ops.trigger. Serial decode triggers are in
+the decode group.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from __future__ import annotations
 import click
 
 from ..cli import osc
+from ..ops import trigger as ops_trig
 
 
 @click.group(name="trigger")
@@ -17,22 +18,22 @@ def trigger_group():
 
 
 @trigger_group.command("mode")
-@click.argument("value", type=click.Choice(["AUTO", "NORM", "SINGLE", "STOP"]), required=False)
+@click.argument("value", type=click.Choice(ops_trig.MODES), required=False)
 @click.pass_context
 def mode(ctx, value):
     """Get/set trigger mode via TRMD."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("TRMD?"))
+        click.echo(ops_trig.query_field(o, "mode"))
     else:
-        o.write(f"TRMD {value}")
+        ops_trig.write_field(o, "mode", value)
         click.echo(f"Trigger mode = {value}")
 
 
 @trigger_group.command("type")
 @click.argument(
     "value",
-    type=click.Choice(["EDGE", "SERIAL", "PULSE", "VIDEO", "SLOPE", "PATTERN", "DROP", "INTV", "RUNT"]),
+    type=click.Choice(ops_trig.TYPES),
     required=False,
 )
 @click.pass_context
@@ -40,22 +41,22 @@ def type_(ctx, value):
     """Get/set trigger type via TRSE."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("TRSE?"))
+        click.echo(ops_trig.query_field(o, "type"))
     else:
-        o.write(f"TRSE {value}")
+        ops_trig.write_field(o, "type", value)
         click.echo(f"Trigger type = {value}")
 
 
 @trigger_group.command("source")
-@click.argument("value", type=click.Choice(["C1", "C2", "C3", "C4", "EXT", "LINE"]), required=False)
+@click.argument("value", type=click.Choice(ops_trig.SOURCES), required=False)
 @click.pass_context
 def source(ctx, value):
     """Get/set trigger source via TRSR."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("TRSR?"))
+        click.echo(ops_trig.query_field(o, "source"))
     else:
-        o.write(f"TRSR {value}")
+        ops_trig.write_field(o, "source", value)
         click.echo(f"Trigger source = {value}")
 
 
@@ -66,22 +67,22 @@ def level(ctx, value):
     """Get/set trigger level (V) via TRLV."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("TRLV?"))
+        click.echo(ops_trig.query_field(o, "level"))
     else:
-        o.write(f"TRLV {value}")
+        ops_trig.write_field(o, "level", value)
         click.echo(f"Trigger level = {value} V")
 
 
 @trigger_group.command("coupling")
-@click.argument("value", type=click.Choice(["DC", "AC", "HFREJ", "LFREJ"]), required=False)
+@click.argument("value", type=click.Choice(ops_trig.COUPLINGS), required=False)
 @click.pass_context
 def coupling(ctx, value):
     """Get/set trigger coupling via TRCP."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("TRCP?"))
+        click.echo(ops_trig.query_field(o, "coupling"))
     else:
-        o.write(f"TRCP {value}")
+        ops_trig.write_field(o, "coupling", value)
         click.echo(f"Trigger coupling = {value}")
 
 
@@ -90,10 +91,10 @@ def coupling(ctx, value):
 def status(ctx):
     """Show current trigger settings."""
     o = osc(ctx)
-    click.echo(f"Mode    : {o.query('TRMD?')}")
-    click.echo(f"Setup   : {o.query('TRSE?')}")
-    for label, cmd in [("Source", "TRSR?"), ("Level", "TRLV?"), ("Coupling", "TRCP?")]:
+    click.echo(f"Mode    : {ops_trig.query_field(o, 'mode')}")
+    click.echo(f"Setup   : {ops_trig.query_field(o, 'type')}")
+    for label, field in [("Source", "source"), ("Level", "level"), ("Coupling", "coupling")]:
         try:
-            click.echo(f"{label:8s}: {o.query(cmd)}")
+            click.echo(f"{label:8s}: {ops_trig.query_field(o, field, retries=0)}")
         except Exception:  # noqa: BLE001
             pass

@@ -7,7 +7,7 @@ name = "sds1104x-cli"
 version = "1.0.0"
 description = "Full-featured CLI to control a Siglent SDS1104X-E oscilloscope over USBTMC"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = [
     "click>=8.0",
@@ -16,8 +16,17 @@ dependencies = [
     "pyusb>=1.2",
 ]
 
+[project.optional-dependencies]
+mcp = ["mcp>=2.3,<3", "typing_extensions>=4.12"]
+dev = ["pytest>=8", "anyio>=4.10", "mcp[cli]>=2.3,<3", "typing_extensions>=4.12"]
+
 [project.scripts]
 osc = "osc_cli.cli:run"
+siglent-mcp = "siglent_mcp.server:main"
 
 [tool.setuptools]
-packages = ["osc_cli", "osc_cli.commands"]
+packages = ["osc_cli", "osc_cli.commands", "osc_cli.ops", "siglent_mcp", "siglent_mcp.tools"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["hw: needs a real SDS1104X-E connected (run with OSC_HW=1)"]

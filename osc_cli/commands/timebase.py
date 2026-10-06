@@ -1,7 +1,6 @@
 """Timebase (horizontal) and acquisition commands (LeCroy dialect).
 
-Timebase: TDIV (time/div), TRDL (delay), HMAG (magnify), SARA (sample rate),
-MSIZ (memory size). Acquisition: AVGA (averages), WFSU (waveform setup).
+The command strings live in osc_cli.ops.timebase and osc_cli.ops.acquisition.
 """
 
 from __future__ import annotations
@@ -9,6 +8,8 @@ from __future__ import annotations
 import click
 
 from ..cli import osc
+from ..ops import acquisition as ops_acq
+from ..ops import timebase as ops_tb
 
 
 @click.group(name="timebase")
@@ -23,9 +24,9 @@ def tdiv(ctx, value):
     """Get/set horizontal scale (s/div) via TDIV."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("TDIV?"))
+        click.echo(ops_tb.query_field(o, "tdiv"))
     else:
-        o.write(f"TDIV {value}")
+        ops_tb.write_field(o, "tdiv", value)
         click.echo(f"Time/div = {value} s")
 
 
@@ -36,9 +37,9 @@ def delay(ctx, value):
     """Get/set horizontal trigger delay (s) via TRDL."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("TRDL?"))
+        click.echo(ops_tb.query_field(o, "delay"))
     else:
-        o.write(f"TRDL {value}")
+        ops_tb.write_field(o, "delay", value)
         click.echo(f"Delay = {value} s")
 
 
@@ -46,7 +47,7 @@ def delay(ctx, value):
 @click.pass_context
 def samplerate(ctx):
     """Query the current sample rate (Sa/s) via SARA."""
-    click.echo(osc(ctx).query("SARA?"))
+    click.echo(ops_tb.query_field(osc(ctx), "sample_rate"))
 
 
 @timebase_group.command("memory")
@@ -56,9 +57,9 @@ def memory(ctx, value):
     """Get/set memory size (e.g. 14M, 1.4M) via MSIZ."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("MSIZ?"))
+        click.echo(ops_tb.query_field(o, "memory"))
     else:
-        o.write(f"MSIZ {value}")
+        ops_tb.write_field(o, "memory", value)
         click.echo(f"Memory size = {value}")
 
 
@@ -69,17 +70,17 @@ def averages(ctx, value):
     """Get/set acquisition averages via AVGA."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("AVGA?"))
+        click.echo(ops_tb.query_field(o, "averages"))
     else:
-        o.write(f"AVGA {value}")
+        ops_tb.write_field(o, "averages", value)
         click.echo(f"Averages = {value}")
 
 
 @timebase_group.command("run")
 @click.pass_context
 def run(ctx):
-    """Start continuous acquisition (ARM)."""
-    osc(ctx).write("ARM")
+    """Resume continuous acquisition (TRMD AUTO/NORM)."""
+    ops_acq.resume(osc(ctx))
     click.echo("Acquisition running.")
 
 
@@ -87,7 +88,7 @@ def run(ctx):
 @click.pass_context
 def stop(ctx):
     """Stop acquisition (STOP)."""
-    osc(ctx).write("STOP")
+    ops_acq.stop(osc(ctx))
     click.echo("Acquisition stopped.")
 
 
@@ -96,8 +97,7 @@ def stop(ctx):
 def status(ctx):
     """Show timebase/acquisition settings."""
     o = osc(ctx)
-    click.echo(f"Time/div   : {o.query('TDIV?')}")
-    click.echo(f"Delay      : {o.query('TRDL?')}")
-    click.echo(f"Sample rate: {o.query('SARA?')}")
-    click.echo(f"Memory     : {o.query('MSIZ?')}")
-    click.echo(f"Averages   : {o.query('AVGA?')}")
+    labels = {"tdiv": "Time/div", "delay": "Delay", "sample_rate": "Sample rate",
+              "memory": "Memory", "averages": "Averages"}
+    for field, label in labels.items():
+        click.echo(f"{label:11s}: {ops_tb.query_field(o, field)}")

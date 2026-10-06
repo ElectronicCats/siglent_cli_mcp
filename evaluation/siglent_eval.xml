@@ -1,0 +1,49 @@
+<evaluation>
+   <!-- Read-only questions. Before running, put the bench in this state and leave it:
+        - SDS1104X-E on USB; channels C1 and C2 on, C3 and C4 off.
+        - C1 probe on the CAL output (1 kHz square wave), probe factor set to match the probe.
+        - Generator (AWG): SINE, 2 kHz, 2 Vpp, 0 V offset, load HZ, output ON,
+          wired to C2 with a BNC cable.
+        - Trigger: EDGE on C1, mode AUTO.
+        Every answer must come from tool calls; no question changes the setup. -->
+   <qa_pair>
+      <question>What is the model name of the connected oscilloscope?</question>
+      <answer>SDS1104X-E</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>What firmware version is the oscilloscope running?</question>
+      <answer>8.1.6.1.37R2</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>What is the frequency of the signal on channel 1, in kilohertz, rounded to one decimal place?</question>
+      <answer>1.0</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>What is the duty cycle of the signal on channel 1, in percent, rounded to the nearest multiple of 10?</question>
+      <answer>50</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>What is the period of the signal on channel 1, in milliseconds, rounded to one decimal place?</question>
+      <answer>1.0</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>How many of the oscilloscope's four channels are currently enabled?</question>
+      <answer>2</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Which channel is the trigger source set to? Answer with the channel name, e.g. C3.</question>
+      <answer>C1</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>What waveform type is the built-in generator set to? Answer with one word in upper case.</question>
+      <answer>SINE</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>The generator output is wired to channel 2. What frequency does the scope measure on channel 2, in kilohertz, rounded to one decimal place?</question>
+      <answer>2.0</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>What output load setting is the generator configured for? Answer HZ (high impedance) or 50.</question>
+      <answer>HZ</answer>
+   </qa_pair>
+</evaluation>
