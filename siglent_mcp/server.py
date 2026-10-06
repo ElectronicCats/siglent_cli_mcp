@@ -13,7 +13,7 @@ from osc_cli.ops.waveform import DEFAULT_MAX_SAMPLES
 
 from .session import Session
 from .storage import Storage
-from .tools import capture, config, decode, status
+from .tools import capture, config, danger, decode, status
 from .tools.common import Deps
 
 SERVER_NAME = "siglent_sds1104xe_mcp"
@@ -26,7 +26,7 @@ anything. Units are SI: volts, seconds, hertz. Tools marked destructive drive th
 generator output into the circuit under test or overwrite the scope configuration; \
 confirm with the user before using them. Captures and decodes save the full data \
 under the data directory and return the file paths."""
-TOOL_MODULES = (status, config, capture, decode)
+TOOL_MODULES = (status, config, capture, decode, danger)
 
 
 def create_server(session: Session | None = None, storage: Storage | None = None,

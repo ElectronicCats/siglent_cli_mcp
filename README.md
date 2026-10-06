@@ -94,6 +94,45 @@ osc decode spi-bytes --clk C1 --mosi C2 --cs C4
 osc raw "C1:PAVA? PKPK"
 ```
 
+## Servidor MCP (para Claude y otros agentes)
+
+El paquete incluye `siglent-mcp`, un servidor [MCP](https://modelcontextprotocol.io)
+que expone el osciloscopio como 34 tools (`siglent_*`): estado, configuración,
+mediciones, capturas de pantalla (PNG) y de forma de onda, decodificación
+UART/I2C/SPI y el generador AWG.
+
+```bash
+.venv/bin/pip install -e ".[mcp]"          # requiere Python >= 3.10
+claude mcp add siglent -- "$PWD/.venv/bin/siglent-mcp"
+```
+
+Para probarlo sin cliente: `.venv/bin/pip install -e ".[dev]"` y
+`.venv/bin/mcp dev siglent_mcp/server.py` (MCP Inspector; necesita `uv` y `npx`).
+
+Las tools que cambian la salida del generador o sobrescriben la configuración
+(`siglent_set_awg*`, `siglent_reset`, `siglent_recall_setup`,
+`siglent_calibrate`, `siglent_run_selftest`, `siglent_send_raw_command`) se
+marcan como destructivas para que el cliente pida confirmación.
+
+| Variable | Default | Uso |
+|---|---|---|
+| `OSC_RESOURCE` | autodetección | Recurso VISA explícito |
+| `OSC_TIMEOUT_MS` | `5000` | Timeout de E/S por lectura |
+| `OSC_LOCK_TIMEOUT_S` | `120` | Espera máxima por el equipo ocupado |
+| `OSC_DATA_DIR` | `~/.local/share/siglent-mcp` | CSV, PNG y JSON generados |
+| `OSC_KEEP_FILES` | `20` | Archivos autogenerados que se conservan por tipo |
+| `OSC_MAX_SAMPLES` | `2000000` | Puntos máximos por canal en una captura |
+| `OSC_LOG_LEVEL` | `INFO` | Logs (van a stderr) |
+
+Evaluación con Claude (opcional, contra el equipo real; ver el comentario de
+`evaluation/siglent_eval.xml` para el cableado):
+
+```bash
+pip install anthropic
+ANTHROPIC_API_KEY=... python ~/.claude/skills/mcp-builder/scripts/evaluation.py \
+  -t stdio -c .venv/bin/siglent-mcp -m claude-opus-5-5 evaluation/siglent_eval.xml
+```
+
 ## Notas de implementación
 
 - **Dialecto LeCroy X-Stream**: las respuestas incluyen cabecera corta
@@ -124,7 +163,8 @@ osc raw "C1:PAVA? PKPK"
 
 ## Tests
 
-Tests offline: `python tests/test_decoders.py`.
+Tests offline: `.venv/bin/python -m pytest` (instala antes `.[dev]`).
+Tests contra el equipo real: `OSC_HW=1 .venv/bin/python -m pytest tests/hw -v -s`.
 
 ## Licencia
 
