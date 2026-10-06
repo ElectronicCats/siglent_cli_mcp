@@ -95,6 +95,25 @@ def test_reconnects_on_next_call_after_failed_call():
     assert len(factory.created) == 2
 
 
+def test_failed_connect_handshake_closes_handle():
+    """When CHDR SHORT fails during connect, the handle must be closed."""
+    # Custom factory that returns devices with controlled failure
+    created = []
+    def bad_factory():
+        fake = FakeOscilloscope()
+        created.append(fake)
+        if len(created) == 1:
+            # First device fails on CHDR SHORT
+            fake.fail_writes = {"CHDR SHORT": OscTransportError("pipe")}
+        return fake
+
+    session = Session(bad_factory)
+    # First attempt fails on CHDR SHORT, second attempt succeeds
+    assert session.run(lambda o: "ok", retry=True) == "ok"
+    assert len(created) == 2
+    assert created[0].closed  # First handle must be closed despite connect failure
+
+
 def test_restore_header_after_success_and_after_error():
     factory = Factory()
     session = Session(factory)
