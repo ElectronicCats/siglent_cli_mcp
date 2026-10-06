@@ -39,7 +39,12 @@ def _decode_bmp(data: bytes):
         raise ValueError("Truncated BMP pixel data")
     # BI_BITFIELDS masks follow the 40-byte info header (offset 54); V4/V5
     # headers store them at the same offset.
-    masks = struct.unpack_from("<III", data, 54) if compression == 3 else _DEFAULT_MASKS.get(bpp)
+    if compression == 3:
+        if len(data) < 66:
+            raise ValueError("Truncated BMP: missing BI_BITFIELDS masks")
+        masks = struct.unpack_from("<III", data, 54)
+    else:
+        masks = _DEFAULT_MASKS.get(bpp)
     rows = []
     for y in range(height):
         src = y if top_down else height - 1 - y
