@@ -1,6 +1,11 @@
 <evaluation>
-   <!-- Setup: SDS1104X-E on USB; C1 probe (x10 setting) on the CAL output;
-        the generator output (AWG) wired to C2 with a BNC cable. -->
+   <!-- Read-only questions. Before running, put the bench in this state and leave it:
+        - SDS1104X-E on USB; channels C1 and C2 on, C3 and C4 off.
+        - C1 probe on the CAL output (1 kHz square wave), probe factor set to match the probe.
+        - Generator (AWG): SINE, 2 kHz, 2 Vpp, 0 V offset, load HZ, output ON,
+          wired to C2 with a BNC cable.
+        - Trigger: EDGE on C1, mode AUTO.
+        Every answer must come from tool calls; no question changes the setup. -->
    <qa_pair>
       <question>What is the model name of the connected oscilloscope?</question>
       <answer>SDS1104X-E</answer>
@@ -10,11 +15,11 @@
       <answer>8.1.6.1.37R2</answer>
    </qa_pair>
    <qa_pair>
-      <question>What is the frequency of the signal on channel 1, in hertz, rounded to the nearest integer?</question>
-      <answer>1000</answer>
+      <question>What is the frequency of the signal on channel 1, in kilohertz, rounded to one decimal place?</question>
+      <answer>1.0</answer>
    </qa_pair>
    <qa_pair>
-      <question>What is the duty cycle of the signal on channel 1, in percent, rounded to the nearest integer?</question>
+      <question>What is the duty cycle of the signal on channel 1, in percent, rounded to the nearest multiple of 10?</question>
       <answer>50</answer>
    </qa_pair>
    <qa_pair>
@@ -22,23 +27,23 @@
       <answer>1.0</answer>
    </qa_pair>
    <qa_pair>
-      <question>Turn channels 1 and 2 on and channels 3 and 4 off. How many channels are enabled afterwards?</question>
+      <question>How many of the oscilloscope's four channels are currently enabled?</question>
       <answer>2</answer>
    </qa_pair>
    <qa_pair>
-      <question>Set the horizontal scale to 500 microseconds per division. What time per division, in seconds, does the scope report afterwards?</question>
-      <answer>0.0005</answer>
+      <question>Which channel is the trigger source set to? Answer with the channel name, e.g. C3.</question>
+      <answer>C1</answer>
    </qa_pair>
    <qa_pair>
-      <question>Make the waveform generator output a 5 kHz square wave of 2 Vpp and measure the frequency on channel 2. What is it in kilohertz, rounded to the nearest integer?</question>
-      <answer>5</answer>
+      <question>What waveform type is the built-in generator set to? Answer with one word in upper case.</question>
+      <answer>SINE</answer>
    </qa_pair>
    <qa_pair>
-      <question>Set the generator to a 2 kHz sine and switch its output off. What frequency, in hertz, does the generator report?</question>
-      <answer>2000</answer>
+      <question>The generator output is wired to channel 2. What frequency does the scope measure on channel 2, in kilohertz, rounded to one decimal place?</question>
+      <answer>2.0</answer>
    </qa_pair>
    <qa_pair>
-      <question>Capture channel 1 and count the rising edges in the returned points between time 0 and 3 ms. How many are there?</question>
-      <answer>3</answer>
+      <question>What output load setting is the generator configured for? Answer HZ (high impedance) or 50.</question>
+      <answer>HZ</answer>
    </qa_pair>
 </evaluation>
