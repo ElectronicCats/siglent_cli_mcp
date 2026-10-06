@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import re
+import struct
 from contextlib import contextmanager
+from dataclasses import replace
 
 from click.testing import CliRunner
 
-from osc_cli.device import OscError, parse_float
+from osc_cli.device import OscError, parse_float, parse_wavedesc, waveform_dict
 
 IDN = "*IDN SIGLENT,SDS1104X-E,SDSMMEBQ3R1234,8.1.6.1.37R2"
 MEASURE_PARAMS = (
@@ -136,6 +138,22 @@ class FakeOscilloscope:
     def close(self) -> None:
         self.closed = True
 
+    def get_waveform_raw(self, channel="C1", sparsing=1, deadline_s=60.0):
+        self.log.append(("wf", channel, sparsing))
+        raw = parse_wavedesc(self.blocks[channel])
+        if sparsing > 1 and self.honor_sparsing:
+            codes = raw.codes[::sparsing]
+            raw = replace(raw, codes=codes, wave_count=len(codes),
+                          horz_interval=raw.horz_interval * sparsing)
+        return raw
+
+    def get_waveform(self, channel="C1", points=0):
+        return waveform_dict(self.get_waveform_raw(channel))
+
+    def read_bmp(self, cmd="SCDP", deadline_s=30.0):
+        self.log.append(("raw", cmd))
+        return self.raw[cmd]
+
 
 def run_cli(monkeypatch, fake, *args):
     """Invoke the `osc` CLI with `fake` in place of the real device."""
@@ -143,3 +161,69 @@ def run_cli(monkeypatch, fake, *args):
 
     monkeypatch.setattr(cli_module, "get_device", lambda *a, **k: fake)
     return CliRunner().invoke(cli_module.cli, list(args), catch_exceptions=False)
+
+
+def make_wavedesc_block(codes, vdiv=0.5, offset=0.0, interval=1e-6, horz_offset=0.0) -> bytes:
+    """A WAVEDESC (346 bytes) followed by the int8 ADC codes, as C<n>:WF? ALL sends it."""
+    codes = bytes(codes)
+    desc = bytearray(346)
+    struct.pack_into("<i", desc, 36, 346)
+    struct.pack_into("<i", desc, 60, len(codes))
+    struct.pack_into("<i", desc, 116, len(codes))
+    struct.pack_into("<i", desc, 124, 0)
+    struct.pack_into("<i", desc, 128, max(len(codes) - 1, 0))
+    struct.pack_into("<f", desc, 156, vdiv)
+    struct.pack_into("<f", desc, 160, offset)
+    struct.pack_into("<f", desc, 176, interval)
+    struct.pack_into("<d", desc, 180, horz_offset)
+    return bytes(desc) + codes
+
+
+def ieee_block(payload: bytes, prefix: bytes = b"ALL,") -> bytes:
+    return prefix + b"#9" + f"{len(payload):09d}".encode() + payload + b"\n"
+
+
+def codes_from_volts(volts, vdiv: float) -> bytes:
+    """Quantize volts to the scope's int8 codes (32 codes per division)."""
+    out = bytearray()
+    for v in volts:
+        code = max(-128, min(127, round(v * 32 / vdiv)))
+        out.append(code & 0xFF)
+    return bytes(out)
+
+
+class FakeInstrument:
+    """Stands in for a pyvisa resource, below osc_cli.device.Oscilloscope."""
+
+    def __init__(self, chunks=(), query_responses=None, query_errors=0):
+        self.timeout = 0
+        self.write_termination = None
+        self.read_termination = "\n"
+        self.chunks = list(chunks)
+        self.query_responses = dict(query_responses or {})
+        self.query_errors = query_errors
+        self.writes: list[str] = []
+        self.clears = 0
+        self.terminations_seen: list = []
+
+    def write(self, cmd):
+        self.writes.append(cmd)
+
+    def read_raw(self):
+        self.terminations_seen.append(self.read_termination)
+        if not self.chunks:
+            raise TimeoutError("VI_ERROR_TMO (-1073807339): Timeout expired")
+        return self.chunks.pop(0)
+
+    def query(self, cmd):
+        self.writes.append(cmd)
+        if self.query_errors:
+            self.query_errors -= 1
+            raise OSError("[Errno 32] Pipe error")
+        return self.query_responses[cmd]
+
+    def clear(self):
+        self.clears += 1
+
+    def close(self):
+        pass
