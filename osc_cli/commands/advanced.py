@@ -5,6 +5,7 @@ from __future__ import annotations
 import click
 
 from ..cli import osc
+from ..ops import misc as ops_misc
 
 
 @click.group(name="counter")
@@ -16,7 +17,7 @@ def counter_group():
 @click.pass_context
 def counter_on(ctx):
     """Enable the frequency counter."""
-    osc(ctx).write("FCNT STATE,ON")
+    ops_misc.set_counter(osc(ctx), True)
     click.echo("Counter enabled.")
 
 
@@ -24,7 +25,7 @@ def counter_on(ctx):
 @click.pass_context
 def counter_off(ctx):
     """Disable the frequency counter."""
-    osc(ctx).write("FCNT STATE,OFF")
+    ops_misc.set_counter(osc(ctx), False)
     click.echo("Counter disabled.")
 
 
@@ -32,7 +33,7 @@ def counter_off(ctx):
 @click.pass_context
 def counter_status(ctx):
     """Show counter status and values."""
-    click.echo(osc(ctx).query("FCNT?"))
+    click.echo(ops_misc.query(osc(ctx), "FCNT"))
 
 
 @counter_group.command("freq")
@@ -41,7 +42,7 @@ def counter_freq(ctx):
     """Query the measured frequency (Hz)."""
     # FCNT? returns a list of KEY,VALUE pairs; extract FRQ.
     o = osc(ctx)
-    resp = o.query("FCNT?")
+    resp = ops_misc.query(o, "FCNT")
     for part in resp.split(","):
         if part.startswith("FRQ"):
             click.echo(part)
@@ -63,7 +64,7 @@ def setup(ctx, path):
     if path is None:
         click.echo("Usage: osc save setup <path>")
     else:
-        o.write(f"STORE_SETUP FILE,\"{path}\"")
+        ops_misc.save_setup(o, path)
         click.echo(f"Setup saved to {path}")
 
 
@@ -72,5 +73,5 @@ def setup(ctx, path):
 @click.pass_context
 def recall_setup(ctx, path):
     """Recall a saved setup."""
-    osc(ctx).write(f"RECALL_SETUP FILE,\"{path}\"")
+    ops_misc.recall_setup(osc(ctx), path)
     click.echo(f"Setup recalled from {path}")
