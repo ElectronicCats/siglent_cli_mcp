@@ -14,6 +14,14 @@ from tests.test_decoders import DT, i2c_wave, spi_wave, uart_wave
 pytestmark = pytest.mark.anyio
 
 
+async def test_uart_description_is_accurate(client):
+    """Verify UART tool description has correct frame structure."""
+    tools = await client.list_tools()
+    uart_tool = next(t for t in tools.tools if t.name == "siglent_decode_uart")
+    assert "{time, value, ascii, errors}" in uart_tool.description
+    assert "time_s" not in uart_tool.description
+
+
 def put_wave(fake, source, volts, vdiv=1.0):
     fake.blocks[source] = make_wavedesc_block(codes_from_volts(volts, vdiv), vdiv=vdiv, interval=DT)
 
