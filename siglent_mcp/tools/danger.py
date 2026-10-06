@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import Field
 
 from osc_cli.ops import awg, misc, system
@@ -58,8 +59,11 @@ def register(server: MCPServer, deps: Deps) -> None:
         phase: Annotated[float | None, Field(ge=0, le=360, description="Phase in degrees.")] = None,
         duty: Annotated[float | None, Field(gt=0, lt=100, description="Square wave duty cycle, %.")] = None,
         load: Literal["HZ", "50"] | None = None,
-        arb: Literal["StairUp", "StairDn", "StairUD", "Ppulse", "Npulse", "Trapezia",
-                     "Upramp", "Dnramp", "ExpFal", "ExpRise"] | None = None,
+        arb: Annotated[
+            Literal["StairUp", "StairDn", "StairUD", "Ppulse", "Npulse", "Trapezia",
+                    "Upramp", "Dnramp", "ExpFal", "ExpRise"] | None,
+            Field(description="Built-in arbitrary waveform; selects wave=ARB."),
+        ] = None,
         modulation: bool | None = None,
         sync: bool | None = None,
     ) -> AwgState:
@@ -82,7 +86,8 @@ def register(server: MCPServer, deps: Deps) -> None:
         cycles: Annotated[int | None, Field(ge=1, le=1_000_000, description="Cycles per burst.")] = None,
         period: Annotated[float | None, Field(gt=0, description="Burst period in seconds.")] = None,
     ) -> BurstState:
-        """Configure burst mode of the waveform generator (N cycles every period). Drives the output."""
+        """Configure burst mode of the waveform generator (N cycles every period). Takes effect on the generator output
+        when it is enabled (siglent_set_awg(enabled=True))."""
         return session.run(awg.apply_burst, enabled, cycles, period, retry=True)
 
     @server.tool(annotations=DANGER)
@@ -94,7 +99,8 @@ def register(server: MCPServer, deps: Deps) -> None:
         time: Annotated[float | None, Field(gt=0, description="Sweep time in seconds.")] = None,
         direction: Literal["UP", "DOWN"] | None = None,
     ) -> SweepState:
-        """Configure a frequency sweep on the waveform generator. Drives the output."""
+        """Configure a frequency sweep on the waveform generator. Takes effect on the generator output
+        when it is enabled (siglent_set_awg(enabled=True))."""
         return session.run(awg.apply_sweep, enabled, start, stop, time, direction, retry=True)
 
     @server.tool(annotations=DANGER)
@@ -108,7 +114,7 @@ def register(server: MCPServer, deps: Deps) -> None:
     @server.tool(annotations=DANGER_ONCE)
     @tool_errors
     def siglent_run_selftest(ctx: Context) -> SelfTestResult:
-        """Run the scope's internal self-test (*TST?). Disconnects the inputs and can
+        """Run the scope's internal self-test (*TST?). Disconnect all probes first; can
         take up to two minutes. passed is true when the scope reports 0."""
         report_progress(ctx, 0, 1, "self-test running")
         raw = session.run(system.selftest, retry=False, timeout_ms=LONG_TIMEOUT_MS)
@@ -131,6 +137,9 @@ def register(server: MCPServer, deps: Deps) -> None:
         command: Annotated[str, Field(min_length=1, max_length=512)],
         expect_response: bool,
     ) -> RawResult:
+        if expect_response and "?" not in command:
+            raise ToolError("expect_response=true needs a query (a command containing '?'); "
+                            "use expect_response=false for settings.")
         response = session.run(system.raw_command, command, expect_response,
                                retry=False, restore_header=True)
         return {"command": command, "response": response}

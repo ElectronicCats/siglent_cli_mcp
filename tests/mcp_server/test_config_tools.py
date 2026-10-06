@@ -73,3 +73,9 @@ async def test_math_display_counter_setup(client, fake):
 async def test_save_setup_rejects_quotes(client):
     result = await client.call_tool("siglent_save_setup", {"path": 'a"b'})
     assert result.is_error and "quotes" in result.content[0].text
+
+
+async def test_save_setup_rejects_command_injection(client, fake):
+    result = await client.call_tool("siglent_save_setup", {"path": "x\nTRMD STOP"})
+    assert result.is_error
+    assert not any("TRMD STOP" in w for w in fake.writes)

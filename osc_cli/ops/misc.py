@@ -109,8 +109,8 @@ def read_counter(o) -> dict:
 
 # ---- setup files stored on the scope ---------------------------------------
 def _check_path(path: str) -> None:
-    if not path or '"' in path:
-        raise ValueError("Setup path must be non-empty and contain no double quotes")
+    if not path or '"' in path or any(ord(c) < 0x20 or ord(c) == 0x7F for c in path):
+        raise ValueError("Setup path must be non-empty and contain no double quotes or control characters")
 
 
 def save_setup(o, path: str) -> None:

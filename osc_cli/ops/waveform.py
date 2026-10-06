@@ -58,7 +58,11 @@ def fetch(o, source: str, max_samples: int | None = None) -> WaveformRaw:
     k = plan_sparsing(count, max_samples)
     expected = math.ceil(count / k) if count else None
     raw = o.get_waveform_raw(source, sparsing=k, deadline_s=transfer_deadline(expected))
-    if max_samples is not None and len(raw.codes) > max_samples * 1.05:
+    if k > 1:
+        too_many = len(raw.codes) > expected * 1.05
+    else:
+        too_many = max_samples is not None and len(raw.codes) > max_samples * 1.05
+    if too_many:
         ignored = " and the scope ignored sparsing" if k > 1 else ""
         raise OscError(
             f"{source}: the capture holds {len(raw.codes)} points, above the limit of "

@@ -58,3 +58,9 @@ async def test_raw_command_not_retried(client, fake):
     r = await client.call_tool("siglent_send_raw_command", {"command": "C1:OUTP ON", "expect_response": False})
     assert r.is_error and "may or may not have run" in r.content[0].text
     assert fake.writes.count("C1:OUTP ON") == 1
+
+
+async def test_raw_command_expect_response_needs_a_query(client, fake):
+    r = await client.call_tool("siglent_send_raw_command", {"command": "TDIV 1E-3", "expect_response": True})
+    assert r.is_error and "needs a query" in r.content[0].text
+    assert "TDIV 1E-3" not in fake.writes

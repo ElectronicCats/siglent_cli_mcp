@@ -87,6 +87,13 @@ def test_fetch_refuses_when_scope_ignores_sparsing():
         waveform.fetch(fake, "C1", max_samples=1000)
 
 
+
+def test_fetch_detects_ignored_sparsing_just_above_limit():
+    fake = fake_with(bytes(1040), count=1040)  # honor_sparsing stays False
+    with pytest.raises(OscError, match="sparsing"):
+        waveform.fetch(fake, "C1", max_samples=1000)
+
+
 def test_fetch_propagates_transport_error_from_sample_count():
     fake = fake_with()
     fake.responses["SANU? C1"] = OscTransportError("timeout")
