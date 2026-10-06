@@ -24,7 +24,7 @@ dev = ["pytest>=8", "anyio>=4.10", "mcp[cli]>=2.3,<3", "typing_extensions>=4.12"
 osc = "osc_cli.cli:run"
 
 [tool.setuptools]
-packages = ["osc_cli", "osc_cli.commands", "osc_cli.ops", "siglent_mcp"]
+packages = ["osc_cli", "osc_cli.commands", "osc_cli.ops", "siglent_mcp", "siglent_mcp.tools"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
