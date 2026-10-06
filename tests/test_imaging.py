@@ -44,3 +44,26 @@ def test_rejects_unsupported_depth():
     data[28] = 8  # biBitCount
     with pytest.raises(ValueError, match="8 bits"):
         bmp_to_png(bytes(data))
+
+
+def test_rejects_bitfields_without_masks():
+    """Regression: BI_BITFIELDS BMP too short to contain masks must raise ValueError."""
+    # Create BMP: header (14) + info (40) + pixel data = 65 bytes total
+    # compression=3 (BI_BITFIELDS) but only 11 bytes after info header (needs 12 for masks)
+    data = bytearray(65)
+    data[0:2] = b"BM"
+    # File size at offset 2
+    import struct
+    struct.pack_into("<I", data, 2, 65)
+    # Pixel offset at offset 10 (54 = 14 + 40)
+    struct.pack_into("<I", data, 10, 54)
+    # Width, height at offset 18-22 (1x1 to minimize pixel data)
+    struct.pack_into("<ii", data, 18, 1, 1)
+    # Planes at offset 26
+    struct.pack_into("<H", data, 26, 1)
+    # Bit count (16) at offset 28
+    struct.pack_into("<H", data, 28, 16)
+    # Compression = 3 (BI_BITFIELDS) at offset 30
+    struct.pack_into("<I", data, 30, 3)
+    with pytest.raises(ValueError, match="BI_BITFIELDS"):
+        bmp_to_png(bytes(data))
