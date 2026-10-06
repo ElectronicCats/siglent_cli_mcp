@@ -2,12 +2,7 @@
 
 The SDS1104X-E has an integrated function/AWG generator controlled via a
 Siglent-style command set (NOT the LeCroy X-Stream dialect used by the rest
-of the scope). Commands are prefixed with C1:.
-
-Verified against the device:
-- C1:BSWV  (basic wave: type, freq, amp, offset, phase, duty)
-- C1:OUTP  (output on/off, load, polarity)
-- C1:MDWV  (modulation)
+of the scope). The command strings live in osc_cli.ops.awg.
 """
 
 from __future__ import annotations
@@ -15,15 +10,11 @@ from __future__ import annotations
 import click
 
 from ..cli import osc
+from ..ops import awg as ops_awg
 
-WAVE_TYPES = ["SINE", "SQUARE", "RAMP", "PULSE", "NOISE", "ARB", "DC"]
-LOADS = ["HZ", "50"]
-
-# Arbitrary waveform names discovered on the device (via C1:ARWV INDEX,n).
-ARB_WAVEFORMS = [
-    "StairUp", "StairDn", "StairUD", "Ppulse", "Npulse", "Trapezia",
-    "Upramp", "Dnramp", "ExpFal", "ExpRise",
-]
+WAVE_TYPES = ops_awg.WAVE_TYPES
+LOADS = ops_awg.LOADS
+ARB_WAVEFORMS = ops_awg.ARB_WAVEFORMS
 
 
 @click.group(name="awg")
@@ -31,9 +22,22 @@ def awg_group():
     """Waveform generator (AWG) control."""
 
 
-def _bset(osc_obj, *pairs):
-    for k, v in pairs:
-        osc_obj.write(f"C1:BSWV {k},{v}")
+def _echo_part(full: str, prefix: str, fallback: bool = False) -> None:
+    for part in full.split(","):
+        if part.startswith(prefix):
+            click.echo(part)
+            return
+    if fallback:
+        click.echo(full)
+
+
+def _basic_get_or_set(ctx, key, prefix, value, message):
+    o = osc(ctx)
+    if value is None:
+        _echo_part(ops_awg.query_basic(o), prefix)
+    else:
+        ops_awg.write_basic(o, key, value)
+        click.echo(message.format(value=value))
 
 
 @awg_group.command("status")
@@ -41,16 +45,16 @@ def _bset(osc_obj, *pairs):
 def status(ctx):
     """Show the full AWG configuration."""
     o = osc(ctx)
-    click.echo(f"Output : {o.query('C1:OUTP?')}")
-    click.echo(f"Wave   : {o.query('C1:BSWV?')}")
-    click.echo(f"Mod    : {o.query('C1:MDWV?')}")
+    click.echo(f"Output : {ops_awg.query_output(o)}")
+    click.echo(f"Wave   : {ops_awg.query_basic(o)}")
+    click.echo(f"Mod    : {ops_awg.query_modulation(o)}")
 
 
 @awg_group.command("on")
 @click.pass_context
 def on(ctx):
     """Turn the AWG output on."""
-    osc(ctx).write("C1:OUTP ON")
+    ops_awg.set_output(osc(ctx), True)
     click.echo("AWG output enabled.")
 
 
@@ -58,7 +62,7 @@ def on(ctx):
 @click.pass_context
 def off(ctx):
     """Turn the AWG output off."""
-    osc(ctx).write("C1:OUTP OFF")
+    ops_awg.set_output(osc(ctx), False)
     click.echo("AWG output disabled.")
 
 
@@ -69,14 +73,9 @@ def wave(ctx, value):
     """Get/set the waveform type (SINE/SQUARE/RAMP/PULSE/NOISE/ARB/DC)."""
     o = osc(ctx)
     if value is None:
-        full = o.query("C1:BSWV?")
-        for part in full.split(","):
-            if part.startswith("WVTP"):
-                click.echo(part)
-                return
-        click.echo(full)
+        _echo_part(ops_awg.query_basic(o), "WVTP", fallback=True)
     else:
-        o.write(f"C1:BSWV WVTP,{value}")
+        ops_awg.write_basic(o, "WVTP", value)
         click.echo(f"Waveform type = {value}")
 
 
@@ -85,16 +84,7 @@ def wave(ctx, value):
 @click.pass_context
 def freq(ctx, value):
     """Get/set the output frequency (Hz)."""
-    o = osc(ctx)
-    if value is None:
-        full = o.query("C1:BSWV?")
-        for part in full.split(","):
-            if part.startswith("FRQ"):
-                click.echo(part)
-                return
-    else:
-        o.write(f"C1:BSWV FRQ,{value}")
-        click.echo(f"Frequency = {value} Hz")
+    _basic_get_or_set(ctx, "FRQ", "FRQ", value, "Frequency = {value} Hz")
 
 
 @awg_group.command("amp")
@@ -102,16 +92,7 @@ def freq(ctx, value):
 @click.pass_context
 def amp(ctx, value):
     """Get/set the amplitude (Vpp)."""
-    o = osc(ctx)
-    if value is None:
-        full = o.query("C1:BSWV?")
-        for part in full.split(","):
-            if part.startswith("AMP,"):
-                click.echo(part)
-                return
-    else:
-        o.write(f"C1:BSWV AMP,{value}")
-        click.echo(f"Amplitude = {value} Vpp")
+    _basic_get_or_set(ctx, "AMP", "AMP,", value, "Amplitude = {value} Vpp")
 
 
 @awg_group.command("offset")
@@ -119,16 +100,7 @@ def amp(ctx, value):
 @click.pass_context
 def offset(ctx, value):
     """Get/set the DC offset (V)."""
-    o = osc(ctx)
-    if value is None:
-        full = o.query("C1:BSWV?")
-        for part in full.split(","):
-            if part.startswith("OFST"):
-                click.echo(part)
-                return
-    else:
-        o.write(f"C1:BSWV OFST,{value}")
-        click.echo(f"Offset = {value} V")
+    _basic_get_or_set(ctx, "OFST", "OFST", value, "Offset = {value} V")
 
 
 @awg_group.command("phase")
@@ -136,16 +108,7 @@ def offset(ctx, value):
 @click.pass_context
 def phase(ctx, value):
     """Get/set the phase (degrees)."""
-    o = osc(ctx)
-    if value is None:
-        full = o.query("C1:BSWV?")
-        for part in full.split(","):
-            if part.startswith("PHSE"):
-                click.echo(part)
-                return
-    else:
-        o.write(f"C1:BSWV PHSE,{value}")
-        click.echo(f"Phase = {value} deg")
+    _basic_get_or_set(ctx, "PHSE", "PHSE", value, "Phase = {value} deg")
 
 
 @awg_group.command("duty")
@@ -153,16 +116,7 @@ def phase(ctx, value):
 @click.pass_context
 def duty(ctx, value):
     """Get/set the square-wave duty cycle (%)."""
-    o = osc(ctx)
-    if value is None:
-        full = o.query("C1:BSWV?")
-        for part in full.split(","):
-            if part.startswith("DUTY"):
-                click.echo(part)
-                return
-    else:
-        o.write(f"C1:BSWV DUTY,{value}")
-        click.echo(f"Duty cycle = {value}%")
+    _basic_get_or_set(ctx, "DUTY", "DUTY", value, "Duty cycle = {value}%")
 
 
 @awg_group.command("load")
@@ -172,13 +126,9 @@ def load(ctx, value):
     """Get/set output load (HZ = high-impedance, 50 = 50 ohm)."""
     o = osc(ctx)
     if value is None:
-        full = o.query("C1:OUTP?")
-        for part in full.split(","):
-            if part.startswith("LOAD"):
-                click.echo(part)
-                return
+        _echo_part(ops_awg.query_output(o), "LOAD")
     else:
-        o.write(f"C1:OUTP LOAD,{value}")
+        ops_awg.set_load(o, value)
         click.echo(f"Load = {value}")
 
 
@@ -195,31 +145,24 @@ def load(ctx, value):
 def set_(ctx, wave, freq, amp, offset, phase, duty, enable, disable):
     """Configure multiple AWG parameters at once."""
     o = osc(ctx)
-    pairs = []
-    if wave is not None:
-        pairs.append(("WVTP", wave))
-    if freq is not None:
-        pairs.append(("FRQ", freq))
-    if amp is not None:
-        pairs.append(("AMP", amp))
-    if offset is not None:
-        pairs.append(("OFST", offset))
-    if phase is not None:
-        pairs.append(("PHSE", phase))
-    if duty is not None:
-        pairs.append(("DUTY", duty))
+    pairs = [
+        (k, v)
+        for k, v in (("WVTP", wave), ("FRQ", freq), ("AMP", amp),
+                     ("OFST", offset), ("PHSE", phase), ("DUTY", duty))
+        if v is not None
+    ]
     for k, v in pairs:
-        o.write(f"C1:BSWV {k},{v}")
+        ops_awg.write_basic(o, k, v)
     if enable:
-        o.write("C1:OUTP ON")
+        ops_awg.set_output(o, True)
     if disable:
-        o.write("C1:OUTP OFF")
+        ops_awg.set_output(o, False)
     if pairs or enable or disable:
         click.echo("AWG configured.")
         if pairs:
-            click.echo(o.query("C1:BSWV?"))
+            click.echo(ops_awg.query_basic(o))
     else:
-        click.echo(o.query("C1:BSWV?"))
+        click.echo(ops_awg.query_basic(o))
 
 
 @awg_group.command("arb")
@@ -229,10 +172,9 @@ def arb(ctx, name):
     """Get/set the arbitrary waveform (built-in shapes)."""
     o = osc(ctx)
     if name is None:
-        click.echo(o.query("C1:ARWV?"))
+        click.echo(ops_awg.query_arb(o))
     else:
-        o.write(f"C1:ARWV INDEX,{name}")
-        o.write("C1:BSWV WVTP,ARB")
+        ops_awg.set_arb(o, name)
         click.echo(f"Arbitrary waveform = {name}")
 
 
@@ -246,17 +188,11 @@ def burst(ctx, enable, disable, cycles, period):
     """Configure burst mode (C1:BTWV)."""
     o = osc(ctx)
     if enable:
-        o.write("C1:BTWV STATE,ON")
+        ops_awg.write_burst(o, enabled=True)
     if disable:
-        o.write("C1:BTWV STATE,OFF")
-    if cycles is not None:
-        o.write(f"C1:BTWV NCYC,{cycles}")
-    if period is not None:
-        o.write(f"C1:BTWV PRD,{period}")
-    if not any([enable, disable, cycles is not None, period is not None]):
-        click.echo(o.query("C1:BTWV?"))
-    else:
-        click.echo(o.query("C1:BTWV?"))
+        ops_awg.write_burst(o, enabled=False)
+    ops_awg.write_burst(o, cycles=cycles, period=period)
+    click.echo(ops_awg.query_burst(o))
 
 
 @awg_group.command("sweep")
@@ -265,27 +201,17 @@ def burst(ctx, enable, disable, cycles, period):
 @click.option("--start", type=float, default=None, help="Start frequency (Hz).")
 @click.option("--stop", type=float, default=None, help="Stop frequency (Hz).")
 @click.option("--time", "time_", type=float, default=None, help="Sweep time (s).")
-@click.option("--direction", type=click.Choice(["UP", "DOWN"]), default=None, help="Sweep direction.")
+@click.option("--direction", type=click.Choice(ops_awg.SWEEP_DIRECTIONS), default=None, help="Sweep direction.")
 @click.pass_context
 def sweep(ctx, enable, disable, start, stop, time_, direction):
     """Configure frequency sweep (C1:SWWV)."""
     o = osc(ctx)
     if enable:
-        o.write("C1:SWWV STATE,ON")
+        ops_awg.write_sweep(o, enabled=True)
     if disable:
-        o.write("C1:SWWV STATE,OFF")
-    if start is not None:
-        o.write(f"C1:SWWV START,{start}")
-    if stop is not None:
-        o.write(f"C1:SWWV STOP,{stop}")
-    if time_ is not None:
-        o.write(f"C1:SWWV TIME,{time_}")
-    if direction is not None:
-        o.write(f"C1:SWWV DIR,{direction}")
-    if not any([enable, disable, start is not None, stop is not None, time_ is not None, direction is not None]):
-        click.echo(o.query("C1:SWWV?"))
-    else:
-        click.echo(o.query("C1:SWWV?"))
+        ops_awg.write_sweep(o, enabled=False)
+    ops_awg.write_sweep(o, start=start, stop=stop, time=time_, direction=direction)
+    click.echo(ops_awg.query_sweep(o))
 
 
 @awg_group.command("modulate")
@@ -296,13 +222,10 @@ def modulate(ctx, enable, disable):
     """Enable/disable modulation (C1:MDWV)."""
     o = osc(ctx)
     if enable:
-        o.write("C1:MDWV STATE,ON")
+        ops_awg.set_modulation(o, True)
     if disable:
-        o.write("C1:MDWV STATE,OFF")
-    if not enable and not disable:
-        click.echo(o.query("C1:MDWV?"))
-    else:
-        click.echo(o.query("C1:MDWV?"))
+        ops_awg.set_modulation(o, False)
+    click.echo(ops_awg.query_modulation(o))
 
 
 @awg_group.command("sync")
@@ -312,7 +235,7 @@ def sync(ctx, value):
     """Get/set the sync output (C1:SYNC)."""
     o = osc(ctx)
     if value is None:
-        click.echo(o.query("C1:SYNC?"))
+        click.echo(ops_awg.query_sync(o))
     else:
-        o.write(f"C1:SYNC {value}")
+        ops_awg.set_sync(o, value)
         click.echo(f"Sync output = {value}")
