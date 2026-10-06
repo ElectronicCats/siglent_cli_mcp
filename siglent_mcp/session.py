@@ -85,8 +85,8 @@ class Session:
     # ---- internals ------------------------------------------------------------
     def _connect(self):
         osc = self._factory()
-        osc.write("CHDR SHORT")
         self._osc = osc
+        osc.write("CHDR SHORT")
         return osc
 
     def _disconnect(self) -> None:
