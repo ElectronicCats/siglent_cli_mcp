@@ -1,7 +1,8 @@
 """Serial decode trigger commands (LeCroy dialect).
 
 The SDS1104X-E exposes serial decode through trigger commands:
-TRIG_UART:..., TRIG_IIC:... (I2C), TRIG_SPI:....
+TRIG_UART:..., TRIG_IIC:... (I2C), TRIG_SPI:.... The command strings and the
+capture/CSV helpers live in osc_cli.ops.decode.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import click
 
 from .. import decoders
 from ..cli import osc
+from ..ops import decode as ops_decode
 
 CH = ["C1", "C2", "C3", "C4"]
 
@@ -31,15 +33,7 @@ def decode_group():
 @click.pass_context
 def uart(ctx, rx, tx, baud, parity, stop, polarity):
     """Configure UART decode trigger."""
-    o = osc(ctx)
-    o.write("TRSE SERIAL")
-    o.write(f"TRIG_UART:RX {rx}")
-    o.write(f"TRIG_UART:BAUD {baud}")
-    o.write(f"TRIG_UART:PARITY {parity}")
-    o.write(f"TRIG_UART:STOP {stop}")
-    o.write(f"TRIG_UART:POLARITY {polarity}")
-    if tx:
-        o.write(f"TRIG_UART:TX {tx}")
+    ops_decode.configure_uart_trigger(osc(ctx), rx, tx, baud, parity, stop, polarity)
     click.echo(f"UART decode: RX={rx} baud={baud} parity={parity} stop={stop}")
 
 
@@ -49,10 +43,7 @@ def uart(ctx, rx, tx, baud, parity, stop, polarity):
 @click.pass_context
 def i2c(ctx, scl, sda):
     """Configure I2C decode trigger."""
-    o = osc(ctx)
-    o.write("TRSE SERIAL")
-    o.write(f"TRIG_IIC:SCL {scl}")
-    o.write(f"TRIG_IIC:SDA {sda}")
+    ops_decode.configure_i2c_trigger(osc(ctx), scl, sda)
     click.echo(f"I2C decode: SCL={scl} SDA={sda}")
 
 
@@ -64,12 +55,7 @@ def i2c(ctx, scl, sda):
 @click.pass_context
 def spi(ctx, clk, miso, mosi, cs):
     """Configure SPI decode trigger."""
-    o = osc(ctx)
-    o.write("TRSE SERIAL")
-    o.write(f"TRIG_SPI:CLK {clk}")
-    o.write(f"TRIG_SPI:MISO {miso}")
-    o.write(f"TRIG_SPI:MOSI {mosi}")
-    o.write(f"TRIG_SPI:CS {cs}")
+    ops_decode.configure_spi_trigger(osc(ctx), clk, miso, mosi, cs)
     click.echo(f"SPI decode: CLK={clk} MISO={miso} MOSI={mosi} CS={cs}")
 
 
@@ -96,22 +82,13 @@ def status(ctx):
 def _load(ctx, source, path, stop):
     """Return (samples, dt) from a CSV file or a live capture of `source`."""
     if path:
-        volts, times = [], []
-        with open(path) as f:
-            next(f, None)  # header: index,voltage,time
-            for line in f:
-                parts = line.strip().split(",")
-                if len(parts) >= 3:
-                    volts.append(float(parts[1]))
-                    times.append(float(parts[2]))
-        if len(volts) < 2:
-            raise click.ClickException(f"{path}: not enough samples.")
-        return volts, (times[-1] - times[0]) / (len(times) - 1)
-    o = osc(ctx)
-    if stop:
-        o.write("STOP")  # freeze acquisition so every channel is the same capture
-    data = o.get_waveform(source, 0)
-    return data["samples"], data["horz_interval"]
+        try:
+            return ops_decode.load_csv(path)
+        except ValueError as e:
+            raise click.ClickException(str(e))
+    # stop=True freezes the acquisition so every channel is the same capture.
+    lines, dt, _ = ops_decode.capture_lines(osc(ctx), [source], stop, None)
+    return lines[source], dt
 
 
 def _fmt_options(f):
