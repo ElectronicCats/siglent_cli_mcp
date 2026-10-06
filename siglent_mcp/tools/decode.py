@@ -76,11 +76,11 @@ def register(server: MCPServer, deps: Deps) -> None:
     ) -> UartPage:
         """Extract UART bytes from a channel (decoded on the host from the captured samples).
 
-        Returns a page of frames {time_s, value, ascii, errors} plus the page as text,
-        and json_path with every frame. errors lists 'parity'/'framing' problems.
-        When nothing decodes, diagnostics shows the levels seen and what to adjust.
-        The capture must hold at least 3 samples per bit (raise time/div resolution
-        for high baud rates).
+        Returns a page of frames {time, value, ascii, errors} (time in seconds from
+        the start of the capture) plus the page as text, and json_path with every frame.
+        errors lists 'parity'/'framing' problems. When nothing decodes, diagnostics
+        shows the levels seen and what to adjust. The capture must hold at least 3
+        samples per bit (raise time/div resolution for high baud rates).
         """
         lines, dt, stopped = _acquire(deps, {"rx": rx}, {"rx": rx_csv}, ("rx",), freeze)
         frames = decode.with_ascii(decoders.uart_decode(

@@ -59,10 +59,12 @@ def register(server: MCPServer, deps: Deps) -> None:
         Returns per channel: statistics over all samples (min, max, vpp, mean, rms
         in V; sample_rate in Sa/s; duration in s), up to max_points [time_s, volts]
         pairs decimated with min/max buckets so glitches are kept, and the path of a
-        CSV with every sample (usable by the decode tools via *_csv). With several
-        channels the acquisition is stopped first so they share one trigger.
-        Captures above OSC_MAX_SAMPLES points per channel are refused; reduce the
-        memory depth with siglent_set_timebase.
+        CSV with every sample (usable by the decode tools via *_csv). A single channel
+        is read without stopping the acquisition; with several channels the acquisition
+        is stopped first so they share one trigger. Captures larger than OSC_MAX_SAMPLES
+        points per channel are thinned on the scope (n and sample_rate then describe
+        the thinned data); if the scope cannot thin them the call is refused — reduce
+        the memory depth with siglent_set_timebase.
         """
 
         def csv_path_for(source):
