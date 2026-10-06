@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from osc_cli.device import OscError, parse_wavedesc
+from osc_cli.device import OscError, OscTransportError, parse_wavedesc
 from osc_cli.ops import waveform
 from tests.fakes import FakeOscilloscope, make_wavedesc_block
 
@@ -85,6 +85,14 @@ def test_fetch_refuses_when_scope_ignores_sparsing():
     fake = fake_with(bytes(5000), count=5000)
     with pytest.raises(OscError, match="OSC_MAX_SAMPLES"):
         waveform.fetch(fake, "C1", max_samples=1000)
+
+
+def test_fetch_propagates_transport_error_from_sample_count():
+    fake = fake_with()
+    fake.responses["SANU? C1"] = OscTransportError("timeout")
+    with pytest.raises(OscTransportError, match="timeout"):
+        waveform.fetch(fake, "C1", max_samples=1000)
+    assert ("wf", "C1") not in [(op, ch) for op, ch, *_ in fake.log]
 
 
 def test_capture_multiple_sources_stops_and_writes_csv(tmp_path):

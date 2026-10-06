@@ -10,7 +10,7 @@ import math
 from array import array
 from collections import Counter
 
-from ..device import OscError, WaveformRaw
+from ..device import OscError, OscTransportError, WaveformRaw
 from . import acquisition
 from ._parse import to_float, value_of
 
@@ -27,6 +27,8 @@ def sample_count(o, source: str) -> int | None:
     """Points in the current acquisition (SANU?), or None if unknown."""
     try:
         n = to_float(value_of(o.query(f"SANU? {source}", retries=0)))
+    except OscTransportError:
+        raise
     except OscError:
         return None
     return int(n) if n else None
